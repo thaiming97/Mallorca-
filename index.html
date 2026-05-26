@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mallorca Hotelauswahl · Juni 2026</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter+Tight:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<style>
+  :root {
+    --bg-deep: #0d1f2d;
+    --bg-paper: #f4ede1;
+    --bg-paper-warm: #ebe0cb;
+    --ink: #1a2e3a;
+    --ink-soft: #4a5b67;
+    --sea: #2d6b8f;
+    --sea-deep: #1a4a66;
+    --terracotta: #b85c3a;
+    --terracotta-deep: #8a3f24;
+    --gold: #c9a961;
+    --olive: #6b7a3e;
+    --shadow: 0 20px 60px rgba(13, 31, 45, 0.35);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    font-family: 'Inter Tight', sans-serif;
+    background: var(--bg-paper);
+    color: var(--ink);
+    -webkit-text-size-adjust: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(184, 92, 58, 0.05), transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(45, 107, 143, 0.06), transparent 50%);
+    background-color: var(--bg-paper);
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 1000;
+    padding: 18px 32px;
+    background: linear-gradient(180deg, rgba(13, 31, 45, 0.96) 0%, rgba(13, 31, 45, 0.88) 100%);
+    backdrop-filter: blur(12px);
+    color: var(--bg-paper);
+    border-bottom: 1px solid rgba(201, 169, 97, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+
+  .brand-mark {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 28px;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .brand-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  .brand-sub {
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(244, 237, 225, 0.6);
+    margin-left: 6px;
+  }
+
+  .meta {
+    display: flex;
+    gap: 28px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(244, 237, 225, 0.75);
+  }
+
+  .meta span strong {
+    color: var(--gold);
+    font-weight: 500;
+    margin-left: 6px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    font-size: 13px;
+  }
+
+  /* ===== MAP ===== */
+  #map {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh; /* dynamic viewport for iOS */
+    background: #aad3df;
+    z-index: 1;
+  }
+
+  .leaflet-container {
+    font-family: 'Inter Tight', sans-serif;
+    background: #b8d8e0;
+  }
+
+  /* Custom Marker */
+  .hotel-marker {
+    width: 44px;
+    height: 44px;
+    background: var(--bg-paper);
+    border: 2px solid var(--terracotta);
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 18px rgba(13, 31, 45, 0.45), 0 0 0 4px rgba(244, 237, 225, 0.4);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  .hotel-marker:hover {
+    transform: rotate(-45deg) scale(1.15);
+    border-color: var(--terracotta-deep);
+    box-shadow: 0 10px 25px rgba(13, 31, 45, 0.55), 0 0 0 6px rgba(201, 169, 97, 0.35);
+  }
+
+  .hotel-marker-inner {
+    transform: rotate(45deg);
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--terracotta-deep);
+    line-height: 1;
+  }
+
+  .hotel-marker.rank-1 { border-color: var(--gold); background: #fff8e7; }
+  .hotel-marker.rank-1 .hotel-marker-inner { color: #8a6f1a; }
+  .hotel-marker.rank-1:hover { border-color: #b8941f; }
+
+  .hotel-marker.rank-2 { border-color: #8a8a8a; background: #f5f5f5; }
+  .hotel-marker.rank-2 .hotel-marker-inner { color: #5a5a5a; }
+
+  .hotel-marker.rank-3 { border-color: #b87333; background: #fdf3e7; }
+  .hotel-marker.rank-3 .hotel-marker-inner { color: #8a4f1a; }
+
+  /* ===== LEGEND ===== */
+  .legend {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 999;
+    background: rgba(244, 237, 225, 0.96);
+    backdrop-filter: blur(12px);
+    padding: 18px 22px;
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(26, 46, 58, 0.1);
+    max-width: 280px;
+  }
+
+  .legend-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: var(--ink);
+    border-bottom: 1px solid rgba(26, 46, 58, 0.15);
+    padding-bottom: 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    border: 2px solid;
+    flex-shrink: 0;
+  }
+
+  .legend-dot.d-gold { border-color: var(--gold); background: #fff8e7; }
+  .legend-dot.d-silver { border-color: #8a8a8a; background: #f5f5f5; }
+  .legend-dot.d-bronze { border-color: #b87333; background: #fdf3e7; }
+  .legend-dot.d-default { border-color: var(--terracotta); background: var(--bg-paper); }
+
+  .legend-hint {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(26, 46, 58, 0.1);
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  /* ===== DETAIL PANEL ===== */
+  .detail-panel {
+    position: fixed;
+    top: 0;
+    right: -560px;
+    width: 100%;
+    max-width: 540px;
+    height: 100vh;
+    background: var(--bg-paper);
+    z-index: 1100;
+    overflow-y: auto;
+    transition: right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -20px 0 60px rgba(13, 31, 45, 0.3);
+    border-left: 1px solid rgba(26, 46, 58, 0.15);
+  }
+
+  .detail-panel.open {
+    right: 0;
+  }
+
+  .detail-panel::-webkit-scrollbar { width: 8px; }
+  .detail-panel::-webkit-scrollbar-track { background: transparent; }
+  .detail-panel::-webkit-scrollbar-thumb { background: rgba(26, 46, 58, 0.2); border-radius: 4px; }
+
+  .detail-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(26, 46, 58, 0.25);
+    background: var(--bg-paper);
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 10;
+    color: var(--ink);
+    font-size: 18px;
+    font-family: 'Inter Tight', sans-serif;
+  }
+
+  .detail-close:hover {
+    background: var(--ink);
+    color: var(--bg-paper);
+    border-color: var(--ink);
+    transform: rotate(90deg);
+  }
+
+  .detail-header {
+    padding: 56px 44px 32px;
+    background: linear-gradient(180deg, var(--bg-paper-warm) 0%, var(--bg-paper) 100%);
+    border-bottom: 1px solid rgba(26, 46, 58, 0.1);
+    position: relative;
+  }
+
+  .detail-rank {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--terracotta);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .detail-rank .medal {
+    font-size: 18px;
+    margin-right: 6px;
+  }
+
+  .detail-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 34px;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 14px;
+    letter-spacing: -0.01em;
+  }
+
+  .detail-location {
+    font-size: 13px;
+    color: var(--ink-soft);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .detail-location::before {
+    content: "";
+    width: 24px;
+    height: 1px;
+    background: var(--terracotta);
+  }
+
+  .detail-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: rgba(26, 46, 58, 0.1);
+    margin: 0;
+    border-bottom: 1px solid rgba(26, 46, 58, 0.1);
+  }
+
+  .stat {
+    padding: 22px 16px;
+    background: var(--bg-paper);
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 26px;
+    line-height: 1;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+
+  .stat-value .euro {
+    font-size: 16px;
+    margin-right: 2px;
+    vertical-align: top;
+    color: var(--terracotta);
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--ink-soft);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .detail-body {
+    padding: 36px 44px 60px;
+  }
+
+  .detail-section {
+    margin-bottom: 36px;
+  }
+
+  .detail-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 20px;
+    color: var(--sea-deep);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, rgba(45, 107, 143, 0.3), transparent);
+  }
+
+  .detail-summary {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink);
+    font-weight: 400;
+  }
+
+  .detail-summary::first-letter {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 48px;
+    font-weight: 600;
+    float: left;
+    line-height: 0.85;
+    padding-right: 8px;
+    padding-top: 4px;
+    color: var(--terracotta);
+  }
+
+  .pros-cons {
+    display: grid;
+    gap: 20px;
+  }
+
+  .list-block {
+    padding: 20px 22px;
+    border-radius: 2px;
+    position: relative;
+  }
+
+  .list-block.pros {
+    background: rgba(107, 122, 62, 0.08);
+    border-left: 3px solid var(--olive);
+  }
+
+  .list-block.cons {
+    background: rgba(184, 92, 58, 0.07);
+    border-left: 3px solid var(--terracotta);
+  }
+
+  .list-block h4 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.02em;
+  }
+
+  .list-block.pros h4 { color: var(--olive); }
+  .list-block.cons h4 { color: var(--terracotta-deep); }
+
+  .list-block ul {
+    list-style: none;
+  }
+
+  .list-block li {
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding: 6px 0 6px 22px;
+    position: relative;
+    color: var(--ink);
+  }
+
+  .list-block.pros li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    color: var(--olive);
+    font-weight: 600;
+  }
+
+  .list-block.cons li::before {
+    content: "✕";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    color: var(--terracotta);
+    font-weight: 600;
+  }
+
+  .verdict {
+    margin-top: 36px;
+    padding: 22px 24px;
+    background: var(--ink);
+    color: var(--bg-paper);
+    border-radius: 2px;
+    position: relative;
+  }
+
+  .verdict-label {
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+
+  .verdict-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 17px;
+    line-height: 1.5;
+    color: rgba(244, 237, 225, 0.95);
+  }
+
+  /* ===== OVERLAY ===== */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 31, 45, 0.4);
+    z-index: 1050;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+
+  .overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* Custom Leaflet popup styling */
+  .leaflet-popup-content-wrapper {
+    background: var(--bg-paper);
+    border-radius: 2px;
+    padding: 0;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(26, 46, 58, 0.1);
+  }
+
+  .leaflet-popup-content {
+    margin: 16px 20px;
+    font-family: 'Inter Tight', sans-serif;
+    color: var(--ink);
+    line-height: 1.4;
+    min-width: 200px;
+  }
+
+  .leaflet-popup-tip {
+    background: var(--bg-paper);
+  }
+
+  .popup-rank {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--terracotta);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .popup-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 18px;
+    line-height: 1.15;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  .popup-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--ink-soft);
+    border-top: 1px solid rgba(26, 46, 58, 0.1);
+    padding-top: 8px;
+    margin-top: 8px;
+  }
+
+  .popup-meta strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .popup-btn {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    background: var(--ink);
+    color: var(--bg-paper);
+    border: none;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .popup-btn:hover {
+    background: var(--terracotta);
+  }
+
+  /* ===== MOBILE ===== */
+  @media (max-width: 768px) {
+    header {
+      padding: 12px 18px;
+      gap: 8px;
+    }
+    .brand-title { font-size: 17px; }
+    .brand-mark { font-size: 22px; }
+    .brand-sub { display: none; }
+    .meta {
+      gap: 14px;
+      font-size: 10px;
+    }
+    .meta span strong { font-size: 11px; }
+
+    .legend {
+      bottom: 14px;
+      left: 14px;
+      right: 14px;
+      max-width: none;
+      padding: 14px 16px;
+    }
+
+    .detail-panel {
+      max-width: 100%;
+      right: -100%;
+    }
+
+    .detail-header { padding: 56px 26px 26px; }
+    .detail-name { font-size: 26px; }
+    .detail-body { padding: 26px 26px 40px; }
+    .stat-value { font-size: 20px; }
+    .stat { padding: 16px 8px; }
+  }
+
+  /* Fade-in animation */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .detail-panel.open .detail-section,
+  .detail-panel.open .verdict {
+    animation: fadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  }
+
+  .detail-panel.open .detail-section:nth-child(1) { animation-delay: 0.1s; }
+  .detail-panel.open .detail-section:nth-child(2) { animation-delay: 0.2s; }
+  .detail-panel.open .detail-section:nth-child(3) { animation-delay: 0.3s; }
+  .detail-panel.open .verdict { animation-delay: 0.4s; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-mark">✦</span>
+    <div>
+      <div class="brand-title">Mallorca · Hotelauswahl</div>
+      <span class="brand-sub">Sechs Favoriten · Konsolidierte Analyse</span>
+    </div>
+  </div>
+  <div class="meta">
+    <span>Reise <strong>11.–14. Juni 2026</strong></span>
+    <span>Gäste <strong>2 Erwachsene</strong></span>
+    <span>Dauer <strong>3 Nächte</strong></span>
+  </div>
+</header>
+
+<div id="map"></div>
+
+<div class="legend">
+  <div class="legend-title">Karte zur Auswahl</div>
+  <div class="legend-item"><span class="legend-dot d-gold"></span> Top-Empfehlung</div>
+  <div class="legend-item"><span class="legend-dot d-silver"></span> Starke Alternative</div>
+  <div class="legend-item"><span class="legend-dot d-bronze"></span> Dritte Wahl</div>
+  <div class="legend-item"><span class="legend-dot d-default"></span> Weitere Favoriten</div>
+  <div class="legend-hint">Klicke auf einen Marker, um die vollständige Hotelanalyse zu öffnen.</div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<aside class="detail-panel" id="detailPanel">
+  <button class="detail-close" id="detailClose" aria-label="Schließen">✕</button>
+  <div id="detailContent"></div>
+</aside>
+
+<script>
+  // ===== HOTEL DATEN =====
+  const hotels = [
+    {
+      id: 'bahia',
+      rank: 1,
+      medal: '🥇',
+      rankLabel: 'Top-Empfehlung',
+      name: 'Hipotels Bahia Cala Millor',
+      subtitle: 'Adults Only',
+      location: 'Cala Millor · Ostküste',
+      coords: [39.5894, 3.3818],
+      price: '622',
+      rating: '9.0',
+      reviews: '890',
+      summary: 'Die kompromissloseste Erfüllung deiner Prioritäten: Sandstrand direkt vor der Tür, Adults Only, sehr gute HP-Qualität und ein 25-minütiger Promenadenspaziergang ins lebhafte Zentrum von Cala Millor mit Restaurants, Bars und Geschäften. Komplett renoviert, modernes Design, Spa. Strikt kontrolliertes Liegenmanagement — kein Handtuchproblem dokumentiert.',
+      pros: [
+        'Direkter Strandzugang an Cala Millor (Sandstrand, Google 4.6/5)',
+        'Reines Adults-Only-Konzept mit stilvollem Publikum',
+        'Komplett renoviert, modernes 4-Sterne-Niveau',
+        'Hipotels-HP-Buffet auf Spitzenniveau bewertet',
+        'Konsequent unterbundenes Handtuchreservieren',
+        'Kilometerlange Promenade direkt vor dem Hotel'
+      ],
+      cons: [
+        'Liegt am ruhigen Süd-Ende — 25 Min Promenade ins Zentrum',
+        'Strand teilweise mit Algen/Seetang (Green-Beach-Konzept)',
+        'Beliebteste Zimmerkategorien früh ausgebucht',
+        'Klassisches deutsches Frühstück eher modern interpretiert'
+      ],
+      verdict: 'Das ist die Wahl, wenn du ohne Kompromisse willst, was du beschrieben hast — Sandstrand zu Fuß, Promenade, Adults Only und sehr gutes HP-Essen.'
+    },
+    {
+      id: 'canyamel',
+      rank: 2,
+      medal: '🥈',
+      rankLabel: 'Starke Alternative',
+      name: 'Canyamel Park Hotel & Spa',
+      subtitle: 'Adults Only +16',
+      location: 'Canyamel · Nordosten',
+      coords: [39.6585, 3.4424],
+      price: '572',
+      rating: '9.1',
+      reviews: '883',
+      summary: 'Wenn du den besten Sandstrand-Direktzugang willst und auf große Promenade verzichten kannst. Nur 50–100 m bis Platja de Canyamel (Google 4.5/5), vier Außenpools (kein Liegenstress denkbar), exzellentes Buffet mit Show-Cooking, Top-Spa. Canyamel selbst ist ein ruhiges, idyllisches Mini-Dorf mit einigen guten Restaurants — aber keine ausgeprägte Abendpromenade.',
+      pros: [
+        'Nur 50–100 m zum feinen Sandstrand Platja de Canyamel',
+        'Vier Außenpools = effektiv kein Handtuchproblem möglich',
+        'Adults Only +16, ruhiges niveauvolles Publikum',
+        'Exzellentes Buffet mit Show-Cooking, hochwertiges À-la-carte',
+        'Top-Spa mit Hydrotherapie',
+        'Idyllische Lage zwischen Pinien'
+      ],
+      cons: [
+        'Keine ausgeprägte Abendpromenade im Dorf',
+        'Wenige Restaurants im Ort (ca. 5–10 Min zu Fuß)',
+        'Lange Transferzeit ~70 Min vom Flughafen',
+        'Auto für Erkundungen sinnvoll'
+      ],
+      verdict: 'Wenn dir Sand vor der Tür und Ruhe wichtiger sind als großer Abendbummel — hier hast du den schönsten Strand und vier Pools ohne Stress.'
+    },
+    {
+      id: 'aguait',
+      rank: 3,
+      medal: '🥉',
+      rankLabel: 'Dritte Wahl',
+      name: 'Grupotel Aguait Resort & Spa',
+      subtitle: 'Adults Only',
+      location: 'Cala Ratjada · Nordosten',
+      coords: [39.7095, 3.4720],
+      price: '560',
+      rating: '9.3',
+      reviews: '2333',
+      summary: 'Höchste Bewertung der Liste (9.3 / 2.333 Reviews), Adults Only direkt an der Felsküste mit eigener kleiner Felsbucht und Spa mit Meerblick. Ein 15–20-minütiger Küstenweg führt nach Cala Ratjada zur Promenade und zum Sandstrand Son Moll. Die Anlage ist älter (1963), wird aber laufend renoviert. Kein Handtuchproblem dokumentiert.',
+      pros: [
+        'Höchste Bewertung der gesamten Liste (9.3)',
+        'Adults Only mit niveauvoller Atmosphäre',
+        'Spa mit Meerblick kostenlos für Gäste',
+        'Schöner Küstenweg zur lebhaften Cala Ratjada-Promenade',
+        'Cala Ratjada-Hafen bietet exzellente Restaurants',
+        'Kein Handtuchstress dokumentiert'
+      ],
+      cons: [
+        'Kein Sandstrand direkt am Hotel — nur Felsbucht',
+        'Sandstrand Son Moll erst nach 15–20 Min Fußweg',
+        'Anlage zeigt in manchen Bereichen ihr Alter',
+        'Lange Transferzeit ~75 Min vom Flughafen'
+      ],
+      verdict: 'Top-Bewertung und schönste Lage — aber der fehlende Sandstrand direkt am Hotel ist genau dein Knackpunkt. Plan B, falls Bahia ausgebucht ist.'
+    },
+    {
+      id: 'iberostar',
+      rank: 4,
+      medal: '✦',
+      rankLabel: 'Luxus-Option',
+      name: 'Iberostar Selection Es Trenc',
+      subtitle: '5-Sterne · Top Hotel Award',
+      location: 'Colònia de Sant Jordi · Süden',
+      coords: [39.3214, 2.9930],
+      price: '950',
+      rating: '9.7',
+      reviews: '830',
+      summary: 'Komplett renoviert und im April 2025 als Iberostar Selection neu eröffnet. 9.7-Bewertung, 5 Sterne, Meerblick aus jedem Zimmer, Rooftop-Bar, Spa, Infinity-Pool. Colònia de Sant Jordi ist ein authentisches Fischerdorf mit Promenade und Hafen — kein Massentourismus. Hauptstrand Es Trenc per Auto/Bus erreichbar. Mit 950 € klar das teuerste Hotel der Liste.',
+      pros: [
+        'Höchste Bewertung der Liste (9.7) und Top-Hotel-Award',
+        '5-Sterne-Luxus, komplett 2025 neu eröffnet',
+        'Authentisches Fischerdorf-Flair statt Touri-Hochburg',
+        'Direkt am Meer mit Infinity-Pool',
+        'Sehr gutes Restaurant Salivent',
+        'Kürzere Transferzeit ~40 Min vom Flughafen'
+      ],
+      cons: [
+        'Mit 950 € klar teuerstes Hotel — 67 % über Aguait',
+        'Zum berühmten Es-Trenc-Strand nicht zu Fuß',
+        'Einige Zimmer kleiner als erwartet',
+        'Vereinzelte Reviews bemängeln Pool-Klientel'
+      ],
+      verdict: 'Wenn das Budget keine Rolle spielt: hier bekommst du 5-Sterne-Luxus, authentisches Dorf und Spitzenbewertung. Sonst ist das Preis-Leistung schief.'
+    },
+    {
+      id: 'thb',
+      rank: 5,
+      medal: '✦',
+      rankLabel: 'Preis-Leistung',
+      name: 'THB Sa Coma Platja',
+      subtitle: 'Junior Suite mit Meerblick',
+      location: 'Sa Coma · Ostküste',
+      coords: [39.5712, 3.3760],
+      price: '465',
+      rating: '8.6',
+      reviews: '450',
+      summary: 'Beachfront-Hotel mit Junior Suiten als Standard — alle mit Meerblick. Frisch renoviert, gutes HP-Buffet wird in Reviews durchgehend gelobt. Sa Coma ist etwas ruhiger als Cala Millor, aber die Promenade vor der Tür verbindet beide Orte. Nicht Adults Only — Familien mit dabei. Aber: Junior Suite zum Top-Preis ist eine ehrliche Ansage.',
+      pros: [
+        'Junior Suite mit Meerblick als Standardzimmer',
+        'Frisch renoviert',
+        'HP-Buffet sehr gut bewertet',
+        'Direkt am Strand und an Sa-Coma-Promenade',
+        'Bestes Preis-Leistungs-Verhältnis der Top-6',
+        'Verbindung über Promenade nach Cala Millor zu Fuß möglich'
+      ],
+      cons: [
+        'Kein Adults Only — Familien mit Kindern',
+        'Sa Coma weniger lebhaft als Cala Millor',
+        'AC-Leistung in Einzelreviews schwach',
+        'Stichprobe mit 450 Reviews kleiner als bei Hipotels'
+      ],
+      verdict: 'Maximaler Wert pro Euro — Junior Suite mit Meerblick, gutes Essen, direkt am Strand. Wenn dich Familien nicht stören, ist das ein No-Brainer.'
+    },
+    {
+      id: 'smy',
+      rank: 6,
+      medal: '✦',
+      rankLabel: 'Authentisches Dorf',
+      name: 'Smy Portocolom',
+      subtitle: 'Renovated 2026',
+      location: 'Portocolom · Südosten',
+      coords: [39.4148, 3.2640],
+      price: '520',
+      rating: '8.3',
+      reviews: '1631',
+      summary: 'Komplett 2026 renoviert mit vier Außenpools, neuer Rooftop-Bar mit Hafenblick und neuen Paddle-Plätzen. Portocolom ist authentisches Fischerdorf mit Naturhafen — Top-Restaurants wie Vora Mar, Sa Llotja, El Baúl in 5–10 Min Fußweg. Aber: 14–20 Min Fußweg zum Sandstrand Cala Marçal, nicht direkt am Strand.',
+      pros: [
+        'Komplett 2026 renoviert',
+        'Authentisches Fischerdorf-Flair (kein Hotelghetto)',
+        'Top-Restaurants in fußläufiger Nähe',
+        'Vier Außenpools — kein Handtuchstress',
+        'Naturhafen direkt vor der Tür',
+        'Neue Rooftop-Bar mit Hafenblick'
+      ],
+      cons: [
+        'Sandstrand Cala Marçal erst nach 14–20 Min Fußweg',
+        'Booking-Score 8.3 schwächer als die Top-3',
+        'Kein klassisches Promenadenflair am Hotel',
+        'Einige Reviews bemängeln Abwassergeruch in Umgebung'
+      ],
+      verdict: 'Die richtige Wahl, wenn dir authentisches mallorquinisches Dorfflair und exzellente Restaurants wichtiger sind als Strand zu Fuß.'
+    }
+  ];
+
+  // ===== MAP INIT =====
+  const map = L.map('map', {
+    zoomControl: true,
+    attributionControl: true
+  });
+
+  // Fit map to show all hotels — works for both desktop and mobile
+  // (called after markers are added below)
+
+  // CartoDB Voyager — refined editorial-style tiles, no token required
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    maxZoom: 19,
+    subdomains: 'abcd'
+  }).addTo(map);
+
+  // ===== ADD MARKERS =====
+  hotels.forEach((hotel, idx) => {
+    const rankClass = hotel.rank <= 3 ? `rank-${hotel.rank}` : '';
+    const markerNum = hotel.rank;
+
+    const icon = L.divIcon({
+      className: 'custom-marker-wrapper',
+      html: `<div class="hotel-marker ${rankClass}"><span class="hotel-marker-inner">${markerNum}</span></div>`,
+      iconSize: [44, 44],
+      iconAnchor: [22, 44],
+      popupAnchor: [0, -42]
+    });
+
+    const marker = L.marker(hotel.coords, { icon }).addTo(map);
+
+    const popupContent = `
+      <div class="popup-rank">${hotel.medal} ${hotel.rankLabel}</div>
+      <div class="popup-name">${hotel.name}</div>
+      <div class="popup-meta">
+        <span>${hotel.location.split(' · ')[0]}</span>
+        <span><strong>${hotel.rating}</strong> · €${hotel.price}</span>
+      </div>
+      <button class="popup-btn" onclick="openDetail('${hotel.id}')">Vollständige Analyse →</button>
+    `;
+
+    marker.bindPopup(popupContent, {
+      maxWidth: 280,
+      closeButton: false,
+      offset: [0, -8]
+    });
+
+    marker.on('click', () => marker.openPopup());
+  });
+
+  // Fit map to all hotel markers with generous padding for header + legend
+  const isMobile = window.innerWidth < 768;
+  const bounds = L.latLngBounds(hotels.map(h => h.coords));
+  map.fitBounds(bounds, {
+    paddingTopLeft: [30, isMobile ? 100 : 110],
+    paddingBottomRight: [30, isMobile ? 220 : 80]
+  });
+
+  // iOS Safari fix: force Leaflet to recalculate size after the page settles
+  setTimeout(() => {
+    map.invalidateSize();
+    map.fitBounds(bounds, {
+      paddingTopLeft: [30, isMobile ? 100 : 110],
+      paddingBottomRight: [30, isMobile ? 220 : 80]
+    });
+  }, 300);
+
+  window.addEventListener('resize', () => {
+    map.invalidateSize();
+  });
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => map.invalidateSize(), 200);
+  });
+
+  // ===== DETAIL PANEL =====
+  const panel = document.getElementById('detailPanel');
+  const overlay = document.getElementById('overlay');
+  const closeBtn = document.getElementById('detailClose');
+  const content = document.getElementById('detailContent');
+
+  function openDetail(id) {
+    const hotel = hotels.find(h => h.id === id);
+    if (!hotel) return;
+
+    map.closePopup();
+
+    content.innerHTML = `
+      <div class="detail-header">
+        <div class="detail-rank"><span class="medal">${hotel.medal}</span>${hotel.rankLabel}</div>
+        <h2 class="detail-name">${hotel.name}<br><span style="font-size:18px; font-style:italic; color: var(--terracotta); font-weight:500;">${hotel.subtitle}</span></h2>
+        <div class="detail-location">${hotel.location}</div>
+      </div>
+
+      <div class="detail-stats">
+        <div class="stat">
+          <div class="stat-value"><span class="euro">€</span>${hotel.price}</div>
+          <div class="stat-label">3 Nächte</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">${hotel.rating}</div>
+          <div class="stat-label">Booking</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">${hotel.reviews}</div>
+          <div class="stat-label">Reviews</div>
+        </div>
+      </div>
+
+      <div class="detail-body">
+        <section class="detail-section">
+          <h3 class="section-title">Einschätzung</h3>
+          <p class="detail-summary">${hotel.summary}</p>
+        </section>
+
+        <section class="detail-section">
+          <h3 class="section-title">Pros & Cons</h3>
+          <div class="pros-cons">
+            <div class="list-block pros">
+              <h4>Wofür es spricht</h4>
+              <ul>${hotel.pros.map(p => `<li>${p}</li>`).join('')}</ul>
+            </div>
+            <div class="list-block cons">
+              <h4>Was du wissen solltest</h4>
+              <ul>${hotel.cons.map(c => `<li>${c}</li>`).join('')}</ul>
+            </div>
+          </div>
+        </section>
+
+        <div class="verdict">
+          <div class="verdict-label">Fazit</div>
+          <div class="verdict-text">${hotel.verdict}</div>
+        </div>
+      </div>
+    `;
+
+    panel.classList.add('open');
+    overlay.classList.add('visible');
+  }
+
+  function closeDetail() {
+    panel.classList.remove('open');
+    overlay.classList.remove('visible');
+  }
+
+  window.openDetail = openDetail;
+  closeBtn.addEventListener('click', closeDetail);
+  overlay.addEventListener('click', closeDetail);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDetail();
+  });
+
+  // Subtle marker entrance animation
+  setTimeout(() => {
+    document.querySelectorAll('.hotel-marker').forEach((m, i) => {
+      m.style.opacity = '0';
+      m.style.transform = 'rotate(-45deg) scale(0.3)';
+      setTimeout(() => {
+        m.style.transition = 'all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        m.style.opacity = '1';
+        m.style.transform = 'rotate(-45deg) scale(1)';
+      }, i * 100);
+    });
+  }, 200);
+
+</script>
+
+</body>
+</html>
